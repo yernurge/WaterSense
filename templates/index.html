@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌊 Умный счётчик воды</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🌊 Умный счётчик воды</h1>
+            <p class="subtitle">Мониторинг потребления воды в реальном времени</p>
+        </header>
+
+        <!-- Current Consumption Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2>💧 Потребление сегодня</h2>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayLiters">-</div>
+                        <div class="stat-label">литров</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayCost">-</div>
+                        <div class="stat-label">тенге</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="stats-row">
+            <div class="card small-card">
+                <div class="card-header">
+                    <h3>📊 Общее потребление</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stat-value small" id="totalLiters">-</div>
+                    <div class="stat-label">литров</div>
+                </div>
+            </div>
+
+            <div class="card small-card">
+                <div class="card-header">
+                    <h3>💰 Суммарные затраты</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stat-value small" id="totalCost">-</div>
+                    <div class="stat-label">тенге</div>
+                </div>
+            </div>
+
+            <div class="card small-card">
+                <div class="card-header">
+                    <h3>📈 Средний расход (7 дней)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stat-value small" id="avgLiters">-</div>
+                    <div class="stat-label">литров/день</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📈 График потребления</h2>
+                <div class="period-selector">
+                    <button class="period-btn active" data-days="7">7 дней</button>
+                    <button class="period-btn" data-days="30">30 дней</button>
+                    <button class="period-btn" data-days="90">90 дней</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="waterChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Link -->
+        <div class="payment-link-card">
+            <a href="/pay" class="payment-link-btn">
+                <div class="payment-link-content">
+                    <div class="payment-link-icon">💳</div>
+                    <div class="payment-link-text">
+                        <h3>Оплатить расходы</h3>
+                        <p>Оплатите счёт за потребленную воду</p>
+                    </div>
+                </div>
+                <svg class="payment-link-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button class="btn btn-primary" id="refreshBtn">
+                🔁 Обновить данные
+            </button>
+            <button class="btn btn-danger" id="resetBtn">
+                🗑️ Очистить базу
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>Smart Water Meter v1.0 | Данные обновляются в реальном времени</p>
+            <p class="info-text">
+                💡 Тариф: <span id="costPerLiter">0.001</span> тг/литр
+            </p>
+        </footer>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Загрузка данных...</p>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

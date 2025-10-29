@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💳 Оплата расхода воды</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .payment-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .payment-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .payment-btn:active {
+            transform: translateY(0);
+        }
+        
+        .payment-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-overlay {
+            backdrop-filter: blur(4px);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex items-center justify-between mb-6">
+            <a href="/" class="text-blue-600 hover:text-blue-800 flex items-center gap-2 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                <span class="font-medium">Назад к панели</span>
+            </a>
+        </div>
+
+        <div class="max-w-4xl mx-auto">
+            <!-- Page Title -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">💳 Оплата расхода воды</h1>
+                <p class="text-gray-600">Выберите месяц и метод оплаты для оплаты счета за воду</p>
+            </div>
+
+            <!-- Month Selector -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <label for="monthSelector" class="block text-sm font-semibold text-gray-700 mb-2">
+                    Выберите месяц
+                </label>
+                <input 
+                    type="month" 
+                    id="monthSelector" 
+                    class="w-full md:w-auto px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                />
+            </div>
+
+            <!-- Summary Card -->
+            <div id="summaryCard" class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-8 mb-6 text-white">
+                <!-- Loading State -->
+                <div id="loadingState" class="space-y-4">
+                    <div class="h-6 loading-skeleton rounded w-1/2"></div>
+                    <div class="h-8 loading-skeleton rounded w-3/4"></div>
+                    <div class="h-6 loading-skeleton rounded w-2/3"></div>
+                </div>
+
+                <!-- Data State -->
+                <div id="dataState" class="hidden">
+                    <h2 class="text-2xl font-bold mb-6" id="displayMonth">-</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                            <div class="text-sm opacity-90 mb-1">Общий расход</div>
+                            <div class="text-3xl font-bold" id="totalLiters">-</div>
+                            <div class="text-sm opacity-75">литров</div>
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                            <div class="text-sm opacity-90 mb-1">Тариф</div>
+                            <div class="text-3xl font-bold" id="pricePerLiter">-</div>
+                            <div class="text-sm opacity-75">₸/литр</div>
+                        </div>
+                        
+                        <div class="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                            <div class="text-sm opacity-90 mb-1">Итого к оплате</div>
+                            <div class="text-3xl font-bold" id="totalAmount">-</div>
+                            <div class="text-sm opacity-75">₸</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-100 text-yellow-800 rounded-lg p-4 text-sm">
+                        <strong>⚠️ Внимание:</strong> Это симуляция оплаты. Реальные деньги не будут списаны.
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="errorState" class="hidden">
+                    <div class="bg-red-100 text-red-800 rounded-lg p-4">
+                        <strong>Ошибка:</strong> <span id="errorMessage">Не удалось загрузить данные</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Breakdown Table -->
+            <div id="breakdownSection" class="bg-white rounded-2xl shadow-lg p-6 mb-6 hidden">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Подробный расход по дням</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-100 border-b-2 border-gray-200">
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Дата</th>
+                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Расход (л)</th>
+                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Стоимость (₸)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="breakdownTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Выберите способ оплаты</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Kaspi Bank -->
+                    <button 
+                        class="payment-btn bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl p-6 shadow-lg flex items-center justify-between group"
+                        data-method="Kaspi"
+                        aria-label="Оплатить через Kaspi Bank"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="bg-white rounded-lg p-3">
+                                <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <div class="font-bold text-lg">Kaspi Bank</div>
+                                <div class="text-sm opacity-90">Kaspi QR</div>
+                            </div>
+                        </div>
+                        <svg class="w-6 h-6 transform group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Halyk Bank -->
+                    <button 
+                        class="payment-btn bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-6 shadow-lg flex items-center justify-between group"
+                        data-method="Halyk"
+                        aria-label="Оплатить через Halyk Bank"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="bg-white rounded-lg p-3">
+                                <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <div class="font-bold text-lg">Halyk Bank</div>
+                                <div class="text-sm opacity-90">Банковская карта</div>
+                            </div>
+                        </div>
+                        <svg class="w-6 h-6 transform group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Apple Pay -->
+                    <button 
+                        class="payment-btn bg-gradient-to-r from-gray-800 to-black text-white rounded-xl p-6 shadow-lg flex items-center justify-between group"
+                        data-method="Apple Pay"
+                        aria-label="Оплатить через Apple Pay"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="bg-white rounded-lg p-3">
+                                <svg class="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <div class="font-bold text-lg">Apple Pay</div>
+                                <div class="text-sm opacity-90">Быстрая оплата</div>
+                            </div>
+                        </div>
+                        <svg class="w-6 h-6 transform group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+
+                    <!-- PayPal -->
+                    <button 
+                        class="payment-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 shadow-lg flex items-center justify-between group"
+                        data-method="PayPal"
+                        aria-label="Оплатить через PayPal"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="bg-white rounded-lg p-3">
+                                <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8.32 21.97a.546.546 0 0 1-.26-.32c-.03-.15-.01-.3.06-.44l2.5-7.65c.02-.06.05-.11.09-.15a.34.34 0 0 1 .23-.09h3.6c2.23 0 3.58-.77 4.08-2.31.1-.3.16-.63.16-.98 0-1.54-1.18-2.32-3.5-2.32h-4.59a.545.545 0 0 0-.53.43l-2.5 7.65c-.02.06-.05.11-.09.15a.34.34 0 0 1-.23.09H4.1a.545.545 0 0 1-.53-.66L5.89 7.2c.4-1.22 1.45-2.04 2.74-2.04h6.02c3.16 0 5.27 1.55 5.27 3.87 0 2.83-2.07 4.81-5.27 4.81H11.1l-1.25 3.82h2.6c.15 0 .29.06.39.16.1.1.14.24.11.38l-.83 2.54a.545.545 0 0 1-.53.43H8.41z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <div class="font-bold text-lg">PayPal</div>
+                                <div class="text-sm opacity-90">Международная оплата</div>
+                            </div>
+                        </div>
+                        <svg class="w-6 h-6 transform group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center text-gray-600 text-sm">
+                <p>💡 Тестовая страница оплаты • Реальные платежи не производятся</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 modal-overlay hidden items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 fade-in">
+            <div class="text-center">
+                <div class="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">Оплата прошла успешно!</h3>
+                <p class="text-gray-600 mb-6" id="successMessage">Ваш платеж был обработан.</p>
+                <button 
+                    id="closeModalBtn"
+                    class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition w-full"
+                >
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 modal-overlay hidden items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 fade-in">
+            <div class="text-center">
+                <div class="bg-red-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">Ошибка оплаты</h3>
+                <p class="text-gray-600 mb-6" id="errorModalMessage">Произошла ошибка при обработке платежа.</p>
+                <button 
+                    id="closeErrorModalBtn"
+                    class="bg-red-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition w-full"
+                >
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='pay.js') }}"></script>
+</body>
+</html>
